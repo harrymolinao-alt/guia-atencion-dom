@@ -192,13 +192,19 @@
             position: fixed;
             top: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
+            width: 100vw;
+            height: 100vh;
             z-index: 9999;
+            background: #000;
         }
 
         #ar-scene.active {
             display: block;
+        }
+
+        a-scene {
+            width: 100%;
+            height: 100%;
         }
 
         .close-ar {
@@ -378,127 +384,114 @@
 
     <div id="ar-scene">
         <button class="close-ar" onclick="closeAR()">✕ Cerrar AR</button>
-        <div id="ar-loading" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-size: 1.5em; text-align: center; z-index: 10001; background: rgba(0,0,0,0.8); padding: 30px; border-radius: 15px;">
-            <p>📷 Solicitando acceso a la cámara...</p>
-            <p style="font-size: 0.8em; margin-top: 10px;">Por favor, permite el acceso cuando tu navegador lo solicite</p>
-        </div>
     </div>
 
     <script>
         let arSceneInitialized = false;
+        let arSceneElement = null;
 
-        async function activateAR() {
-            const arScene = document.getElementById('ar-scene');
-            const arLoading = document.getElementById('ar-loading');
-            arScene.classList.add('active');
+        function activateAR() {
+            const arContainer = document.getElementById('ar-scene');
+            arContainer.classList.add('active');
 
-            // Verificar si ya está inicializado
-            if (arSceneInitialized) {
-                arLoading.style.display = 'none';
+            // Si ya está inicializado, solo mostrar
+            if (arSceneInitialized && arSceneElement) {
+                console.log('AR ya inicializado, mostrando...');
                 return;
             }
 
-            try {
-                // Solicitar permiso de cámara primero
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: 'environment' } 
-                });
-                
-                // Si se obtiene permiso, detener el stream temporal
-                stream.getTracks().forEach(track => track.stop());
-                
-                // Ocultar mensaje de carga
-                arLoading.innerHTML = '<p>📱 Cámara activada</p><p style="font-size: 0.8em; margin-top: 10px;">Apunta al marcador Hiro para ver el contenido AR</p>';
-                
-                // Crear la escena AR
-                const sceneHTML = `
-                    <a-scene 
-                        embedded 
-                        arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
-                        vr-mode-ui="enabled: false"
-                        renderer="logarithmicDepthBuffer: true; precision: medium;">
+            console.log('Inicializando AR...');
+            
+            // Crear la escena AR inmediatamente
+            const sceneHTML = `
+                <a-scene 
+                    embedded 
+                    arjs="sourceType: webcam; debugUIEnabled: false; trackingMethod: best;"
+                    vr-mode-ui="enabled: false"
+                    renderer="logarithmicDepthBuffer: true; precision: medium; antialias: true;"
+                    style="width: 100vw; height: 100vh;">
+                    
+                    <a-marker preset="hiro">
+                        <a-box 
+                            position="0 0.5 0" 
+                            material="color: #11998e; opacity: 0.9;" 
+                            animation="property: rotation; to: 0 360 0; loop: true; dur: 10000"
+                            scale="1 1 1">
+                        </a-box>
                         
-                        <a-marker preset="hiro">
-                            <a-box 
-                                position="0 0.5 0" 
-                                material="color: #11998e;" 
-                                animation="property: rotation; to: 0 360 0; loop: true; dur: 10000"
-                                scale="1 1 1">
-                                <a-text 
-                                    value="Guia de Atencion" 
-                                    align="center" 
-                                    color="#FFF" 
-                                    position="0 0 0.51"
-                                    width="4"></a-text>
-                            </a-box>
-                            
-                            <a-text 
-                                value="DOM Curico" 
-                                align="center" 
-                                color="#38ef7d" 
-                                position="0 1.5 0" 
-                                scale="2 2 2"
-                                width="3"></a-text>
-                            
-                            <a-text 
-                                value="+569 94410580" 
-                                align="center" 
-                                color="#FFF" 
-                                position="0 -0.5 0" 
-                                scale="1.5 1.5 1.5"
-                                width="4"></a-text>
-                            
-                            <a-cylinder 
-                                position="0 0 0" 
-                                radius="0.5" 
-                                height="0.1" 
-                                color="#4CC3D9"
-                                animation="property: position; to: 0 0.2 0; dir: alternate; loop: true; dur: 1000"></a-cylinder>
-                        </a-marker>
+                        <a-text 
+                            value="DOM Curico" 
+                            align="center" 
+                            color="#FFF" 
+                            position="0 1.5 0" 
+                            scale="2 2 2"
+                            width="3"></a-text>
                         
-                        <a-entity camera></a-entity>
-                    </a-scene>
-                `;
-                
-                arScene.innerHTML = `
-                    <button class="close-ar" onclick="closeAR()">✕ Cerrar AR</button>
-                    <div style="position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: white; padding: 15px 30px; border-radius: 10px; z-index: 10001; text-align: center;">
-                        <p>📷 Busca el marcador HIRO</p>
-                        <a href="https://raw.githubusercontent.com/AR-js-org/AR.js/master/data/images/hiro.png" target="_blank" style="color: #4CC3D9; text-decoration: underline; font-size: 0.9em;">Descargar marcador</a>
-                    </div>
-                    ${sceneHTML}
-                `;
-                
-                arSceneInitialized = true;
-                
-            } catch (error) {
-                console.error('Error al acceder a la cámara:', error);
-                arLoading.innerHTML = `
-                    <p>❌ Error de cámara</p>
-                    <p style="font-size: 0.8em; margin-top: 10px;">
-                        ${error.name === 'NotAllowedError' ? 
-                            'Debes permitir el acceso a la cámara para usar AR' : 
-                            'No se pudo acceder a la cámara. Verifica los permisos.'}
-                    </p>
-                    <button onclick="closeAR()" style="margin-top: 15px; padding: 10px 20px; background: #f5576c; color: white; border: none; border-radius: 5px; cursor: pointer;">
-                        Cerrar
-                    </button>
-                `;
-            }
+                        <a-text 
+                            value="+569 94410580" 
+                            align="center" 
+                            color="#38ef7d" 
+                            position="0 0.5 0" 
+                            scale="1.5 1.5 1.5"
+                            width="4"></a-text>
+                        
+                        <a-cylinder 
+                            position="0 0 0" 
+                            radius="0.5" 
+                            height="0.1" 
+                            color="#4CC3D9"
+                            animation="property: position; to: 0 0.2 0; dir: alternate; loop: true; dur: 1000"></a-cylinder>
+                    </a-marker>
+                    
+                    <a-entity camera></a-entity>
+                </a-scene>
+            `;
+            
+            arContainer.innerHTML = `
+                <button class="close-ar" onclick="closeAR()">✕ Cerrar AR</button>
+                <div id="ar-instructions" style="position: fixed; top: 80px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: white; padding: 15px 30px; border-radius: 10px; z-index: 10001; text-align: center; max-width: 90%;">
+                    <p style="margin: 5px 0;">📷 Apunta al marcador HIRO</p>
+                    <a href="https://raw.githubusercontent.com/AR-js-org/AR.js/master/data/images/hiro.png" target="_blank" style="color: #4CC3D9; text-decoration: underline; font-size: 0.85em;">Descargar marcador aquí</a>
+                </div>
+                ${sceneHTML}
+            `;
+            
+            // Esperar a que la escena se cargue
+            setTimeout(() => {
+                arSceneElement = arContainer.querySelector('a-scene');
+                if (arSceneElement) {
+                    arSceneElement.addEventListener('loaded', () => {
+                        console.log('Escena AR cargada correctamente');
+                        arSceneInitialized = true;
+                    });
+                    
+                    arSceneElement.addEventListener('arjs-video-loaded', () => {
+                        console.log('Video de cámara cargado');
+                        const instructions = document.getElementById('ar-instructions');
+                        if (instructions) {
+                            setTimeout(() => {
+                                instructions.style.opacity = '0';
+                                setTimeout(() => instructions.style.display = 'none', 500);
+                            }, 5000);
+                        }
+                    });
+                }
+            }, 500);
         }
 
         function closeAR() {
-            const arScene = document.getElementById('ar-scene');
-            arScene.classList.remove('active');
+            const arContainer = document.getElementById('ar-scene');
+            arContainer.classList.remove('active');
             
-            // Detener todos los streams de video
-            if (arSceneInitialized) {
-                const videoElements = arScene.querySelectorAll('video');
-                videoElements.forEach(video => {
-                    if (video.srcObject) {
-                        video.srcObject.getTracks().forEach(track => track.stop());
-                    }
-                });
+            // Detener la cámara
+            if (arSceneElement) {
+                const video = arSceneElement.querySelector('video');
+                if (video && video.srcObject) {
+                    video.srcObject.getTracks().forEach(track => {
+                        track.stop();
+                        console.log('Cámara detenida');
+                    });
+                }
             }
         }
 
@@ -506,6 +499,11 @@
         const cards = document.querySelectorAll('.card');
         cards.forEach((card, index) => {
             card.style.animationDelay = `${index * 0.1}s`;
+        });
+
+        // Limpiar cuando se cierra la página
+        window.addEventListener('beforeunload', () => {
+            closeAR();
         });
     </script>
 </body>
